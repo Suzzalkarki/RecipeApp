@@ -3,7 +3,8 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
-const recipeRoutes = require('./routes/recipeRoutes');   // ← NEW
+const recipeRoutes = require('./routes/recipeRoutes');
+const chefRoutes = require('./routes/chefRoutes');     // ← NEW
 
 dotenv.config();
 connectDB();
@@ -15,7 +16,8 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/recipes', recipeRoutes);    // ← NEW
+app.use('/api/recipes', recipeRoutes);
+app.use('/api/chefs', chefRoutes);      // ← NEW
 
 app.get('/', (req, res) => {
   res.send('RecipeNest API is running! 🍳');

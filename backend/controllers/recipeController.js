@@ -72,16 +72,17 @@ const updateRecipe = async (req, res) => {
       return res.status(404).json({ message: 'Recipe not found' });
     }
 
-    // Security check: only the chef who created it can update it
-    // recipe.chefId is a MongoDB ObjectId — must convert to string to compare
     if (recipe.chefId.toString() !== req.chef._id.toString()) {
       return res.status(403).json({ message: 'Not authorized to update this recipe' });
     }
 
-    // findByIdAndUpdate returns the UPDATED document (new: true)
+    // ✅ FIXED — only allow safe fields to be updated
+    // We manually pick which fields can change — chefId is NOT in this list
+    const { title, description, ingredients, instructions, cookingTime, category, image } = req.body;
+
     const updatedRecipe = await Recipe.findByIdAndUpdate(
       req.params.id,
-      req.body,           // update with whatever fields were sent
+      { title, description, ingredients, instructions, cookingTime, category, image },
       { new: true, runValidators: true }
     );
 
@@ -91,7 +92,6 @@ const updateRecipe = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 // ─── DELETE a recipe (Protected) ─────────────────────────────────
 const deleteRecipe = async (req, res) => {
   try {
