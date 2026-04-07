@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate , Navigate} from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../utils/api';
 
@@ -8,8 +8,13 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, chef } = useAuth();   // ← add chef here
   const navigate = useNavigate();
+
+  // ✅ NEW — redirect if already logged in
+  if (chef) {
+    return <Navigate to="/dashboard" />;
+  }
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

@@ -3,13 +3,21 @@ import { useAuth } from "../context/AuthContext";
 import API from "../utils/api";
 
 const Dashboard = () => {
-  const { chef } = useAuth();
+  const { chef, updateChef } = useAuth();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [imageFile, setImageFile] = useState(null); // the actual file
   const [imagePreview, setImagePreview] = useState(""); // preview URL
   const [uploading, setUploading] = useState(false); // upload progress
+
+  // Edit recipe states
+  const [editingId, setEditingId] = useState(null); // which recipe is being edited
+  const [editData, setEditData] = useState({}); // edit form values
+  const [editImageFile, setEditImageFile] = useState(null);
+  const [editImagePreview, setEditImagePreview] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
 
   // Add recipe form state
   const [showForm, setShowForm] = useState(false);
@@ -25,6 +33,18 @@ const Dashboard = () => {
   const [formError, setFormError] = useState("");
   const [formLoading, setFormLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
+
+  // Profile edit states
+  const [showProfileForm, setShowProfileForm] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: chef.name,
+    bio: chef.bio || "",
+    profileImage: chef.profileImage || "",
+  });
+  const [profileImageFile, setProfileImageFile] = useState(null);
+  const [profileImagePreview, setProfileImagePreview] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
 
   // Fetch chef's own recipes on load
   useEffect(() => {
@@ -96,6 +116,11 @@ const Dashboard = () => {
         .map((i) => i.trim())
         .filter((i) => i !== "");
 
+      // Add this validation
+      if (ingredientsArray.length === 0) {
+        return setFormError("Please add at least one ingredient");
+      }
+
       const { data } = await API.post("/recipes", {
         ...formData,
         image: imageUrl,
@@ -134,6 +159,116 @@ const Dashboard = () => {
       setRecipes(recipes.filter((r) => r._id !== recipeId));
     } catch (err) {
       alert("Failed to delete recipe.");
+    }
+  };
+  // Opens the edit form for a specific recipe
+  const handleEditClick = (recipe) => {
+    setEditingId(recipe._id);
+    setEditError("");
+    setEditImageFile(null);
+    setEditImagePreview("");
+    // Pre-fill form with existing recipe data
+    setEditData({
+      title: recipe.title,
+      description: recipe.description,
+      // Convert array back to comma-separated string for the input
+      ingredients: recipe.ingredients.join(", "),
+      instructions: recipe.instructions,
+      cookingTime: recipe.cookingTime,
+      category: recipe.category,
+      image: recipe.image || "",
+    });
+  };
+
+  // Handles image file selection in edit form
+  const handleEditImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setEditImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setEditImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  // Submits the edit form
+  const handleEditSubmit = async (e, recipeId) => {
+    e.preventDefault();
+    setEditError("");
+
+    try {
+      setEditLoading(true);
+      let imageUrl = editData.image;
+
+      // Upload new image if chef selected one
+      if (editImageFile) {
+        const uploadData = new FormData();
+        uploadData.append("image", editImageFile);
+        const { data: uploadResult } = await API.post("/upload", uploadData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        imageUrl = uploadResult.url;
+      }
+
+      const ingredientsArray = editData.ingredients
+        .split(",")
+        .map((i) => i.trim())
+        .filter((i) => i !== "");
+
+      const { data } = await API.put(`/recipes/${recipeId}`, {
+        ...editData,
+        image: imageUrl,
+        ingredients: ingredientsArray,
+        cookingTime: Number(editData.cookingTime) || 0,
+      });
+
+      // Update the recipe in local state — no re-fetch needed
+      setRecipes(recipes.map((r) => (r._id === recipeId ? data : r)));
+      setEditingId(null); // close the edit form
+      setSuccessMsg("Recipe updated successfully!");
+    } catch (err) {
+      setEditError(err.response?.data?.message || "Failed to update recipe");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setProfileError("");
+
+    try {
+      setProfileLoading(true);
+      let imageUrl = profileData.profileImage;
+
+      if (profileImageFile) {
+        const uploadData = new FormData();
+        uploadData.append("image", profileImageFile);
+        const { data: uploadResult } = await API.post("/upload", uploadData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        imageUrl = uploadResult.url;
+      }
+
+      const { data } = await API.put(`/chefs/${chef._id}`, {
+        ...profileData,
+        profileImage: imageUrl,
+      });
+
+      // ✅ NEW — update context + localStorage so Navbar reflects changes
+      updateChef({
+        name: data.name,
+        bio: data.bio,
+        profileImage: data.profileImage,
+      });
+
+      setSuccessMsg("Profile updated successfully!");
+      setShowProfileForm(false);
+      setProfileImageFile(null);
+    } catch (err) {
+      setProfileError(
+        err.response?.data?.message || "Failed to update profile",
+      );
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -322,47 +457,385 @@ const Dashboard = () => {
 
           <div style={styles.recipesList}>
             {recipes.map((recipe) => (
-              <div key={recipe._id} style={styles.recipeRow}>
-                {/* Recipe image thumbnail */}
-                {recipe.image ? (
+              <div key={recipe._id}>
+                {/* Recipe Row */}
+                <div style={styles.recipeRow}>
+                  {recipe.image ? (
+                    <img
+                      src={recipe.image}
+                      alt={recipe.title}
+                      style={styles.thumbnail}
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div style={styles.thumbnailPlaceholder}>🍽️</div>
+                  )}
+
+                  <div style={styles.recipeInfo}>
+                    <h3 style={styles.recipeName}>{recipe.title}</h3>
+                    <div style={styles.recipeMeta}>
+                      <span style={styles.categoryPill}>{recipe.category}</span>
+                      <span style={styles.muted}>
+                        ⏱ {recipe.cookingTime} mins
+                      </span>
+                      <span style={styles.muted}>
+                        {recipe.ingredients.length} ingredients
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={styles.actions}>
+                    {/* Edit button — toggles inline form */}
+                    <button
+                      onClick={() =>
+                        editingId === recipe._id
+                          ? setEditingId(null) // clicking again closes it
+                          : handleEditClick(recipe)
+                      }
+                      style={styles.editBtn}
+                    >
+                      {editingId === recipe._id ? "Cancel" : "Edit"}
+                    </button>
+
+                    <button
+                      onClick={() => handleDelete(recipe._id)}
+                      style={styles.deleteBtn}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inline Edit Form — only shows for the recipe being edited */}
+                {editingId === recipe._id && (
+                  <div style={styles.editForm}>
+                    <h4 style={styles.editFormTitle}>
+                      Editing: {recipe.title}
+                    </h4>
+
+                    {editError && (
+                      <div style={styles.formError}>{editError}</div>
+                    )}
+
+                    <form onSubmit={(e) => handleEditSubmit(e, recipe._id)}>
+                      <div style={styles.formGrid}>
+                        <div style={styles.field}>
+                          <label style={styles.label}>Title</label>
+                          <input
+                            name="title"
+                            value={editData.title}
+                            onChange={(e) =>
+                              setEditData({
+                                ...editData,
+                                title: e.target.value,
+                              })
+                            }
+                            style={styles.input}
+                          />
+                        </div>
+
+                        <div style={styles.field}>
+                          <label style={styles.label}>Category</label>
+                          <select
+                            name="category"
+                            value={editData.category}
+                            onChange={(e) =>
+                              setEditData({
+                                ...editData,
+                                category: e.target.value,
+                              })
+                            }
+                            style={styles.input}
+                          >
+                            {[
+                              "Breakfast",
+                              "Lunch",
+                              "Dinner",
+                              "Dessert",
+                              "Snack",
+                              "Other",
+                            ].map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div style={styles.field}>
+                          <label style={styles.label}>
+                            Cooking Time (mins)
+                          </label>
+                          <input
+                            type="number"
+                            value={editData.cookingTime}
+                            onChange={(e) =>
+                              setEditData({
+                                ...editData,
+                                cookingTime: e.target.value,
+                              })
+                            }
+                            style={styles.input}
+                          />
+                        </div>
+
+                        <div style={styles.field}>
+                          <label style={styles.label}>Image</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleEditImageChange}
+                            style={{ marginBottom: "0.4rem", display: "block" }}
+                          />
+                          <input
+                            value={editData.image}
+                            onChange={(e) =>
+                              setEditData({
+                                ...editData,
+                                image: e.target.value,
+                              })
+                            }
+                            style={styles.input}
+                            placeholder="Or paste image URL..."
+                          />
+                          {(editImagePreview || editData.image) && (
+                            <img
+                              src={editImagePreview || editData.image}
+                              alt="preview"
+                              style={{
+                                marginTop: "0.4rem",
+                                width: "100%",
+                                height: "120px",
+                                objectFit: "cover",
+                                borderRadius: "6px",
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={styles.field}>
+                        <label style={styles.label}>Description</label>
+                        <textarea
+                          value={editData.description}
+                          onChange={(e) =>
+                            setEditData({
+                              ...editData,
+                              description: e.target.value,
+                            })
+                          }
+                          style={styles.textarea}
+                          rows={2}
+                        />
+                      </div>
+
+                      <div style={styles.field}>
+                        <label style={styles.label}>
+                          Ingredients (comma separated)
+                        </label>
+                        <textarea
+                          value={editData.ingredients}
+                          onChange={(e) =>
+                            setEditData({
+                              ...editData,
+                              ingredients: e.target.value,
+                            })
+                          }
+                          style={styles.textarea}
+                          rows={2}
+                        />
+                      </div>
+
+                      <div style={styles.field}>
+                        <label style={styles.label}>Instructions</label>
+                        <textarea
+                          value={editData.instructions}
+                          onChange={(e) =>
+                            setEditData({
+                              ...editData,
+                              instructions: e.target.value,
+                            })
+                          }
+                          style={styles.textarea}
+                          rows={4}
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={editLoading}
+                        style={{
+                          ...styles.submitBtn,
+                          opacity: editLoading ? 0.7 : 1,
+                        }}
+                      >
+                        {editLoading ? "Saving..." : "Save Changes"}
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Profile Section */}
+        <div style={{ ...styles.section, marginTop: "1.5rem" }}>
+          <div style={styles.header}>
+            <h2 style={styles.sectionTitle}>My Profile</h2>
+            <button
+              onClick={() => setShowProfileForm(!showProfileForm)}
+              style={styles.editBtn}
+            >
+              {showProfileForm ? "Cancel" : "Edit Profile"}
+            </button>
+          </div>
+
+          {/* Current Profile Info */}
+          {!showProfileForm && (
+            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+              {chef.profileImage ? (
+                <img
+                  src={chef.profileImage}
+                  alt={chef.name}
+                  style={{
+                    width: "70px",
+                    height: "70px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "70px",
+                    height: "70px",
+                    borderRadius: "50%",
+                    backgroundColor: "#e74c3c",
+                    color: "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.8rem",
+                    fontWeight: "700",
+                  }}
+                >
+                  {chef.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p style={{ fontWeight: "600", color: "#1a1a1a" }}>
+                  {chef.name}
+                </p>
+                <p style={{ color: "#666", fontSize: "0.875rem" }}>
+                  {chef.email}
+                </p>
+                <p
+                  style={{
+                    color: "#555",
+                    fontSize: "0.875rem",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  {chef.bio || "No bio added yet."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Profile Form */}
+          {showProfileForm && (
+            <form onSubmit={handleProfileUpdate}>
+              {profileError && (
+                <div style={styles.formError}>{profileError}</div>
+              )}
+
+              <div style={styles.field}>
+                <label style={styles.label}>Name</label>
+                <input
+                  value={profileData.name}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, name: e.target.value })
+                  }
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Bio</label>
+                <textarea
+                  value={profileData.bio}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, bio: e.target.value })
+                  }
+                  style={styles.textarea}
+                  rows={3}
+                  placeholder="Tell food lovers about yourself..."
+                />
+              </div>
+
+              <div style={styles.field}>
+                <label style={styles.label}>Profile Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    setProfileImageFile(file);
+                    const reader = new FileReader();
+                    reader.onloadend = () =>
+                      setProfileImagePreview(reader.result);
+                    reader.readAsDataURL(file);
+                  }}
+                  style={{ display: "block", marginBottom: "0.5rem" }}
+                />
+                <input
+                  value={profileData.profileImage}
+                  onChange={(e) =>
+                    setProfileData({
+                      ...profileData,
+                      profileImage: e.target.value,
+                    })
+                  }
+                  style={styles.input}
+                  placeholder="Or paste image URL..."
+                />
+                {(profileImagePreview || profileData.profileImage) && (
                   <img
-                    src={recipe.image}
-                    alt={recipe.title}
-                    style={styles.thumbnail}
+                    src={profileImagePreview || profileData.profileImage}
+                    alt="preview"
+                    style={{
+                      marginTop: "0.5rem",
+                      width: "80px",
+                      height: "80px",
+                      borderRadius: "50%",
+                      objectFit: "cover",
+                      border: "2px solid #e74c3c",
+                    }}
                     onError={(e) => {
                       e.target.style.display = "none";
                     }}
                   />
-                ) : (
-                  <div style={styles.thumbnailPlaceholder}>🍽️</div>
                 )}
-
-                {/* Recipe info */}
-                <div style={styles.recipeInfo}>
-                  <h3 style={styles.recipeName}>{recipe.title}</h3>
-                  <div style={styles.recipeMeta}>
-                    <span style={styles.categoryPill}>{recipe.category}</span>
-                    <span style={styles.muted}>
-                      ⏱ {recipe.cookingTime} mins
-                    </span>
-                    <span style={styles.muted}>
-                      {recipe.ingredients.length} ingredients
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div style={styles.actions}>
-                  <button
-                    onClick={() => handleDelete(recipe._id)}
-                    style={styles.deleteBtn}
-                  >
-                    Delete
-                  </button>
-                </div>
               </div>
-            ))}
-          </div>
+
+              <button
+                type="submit"
+                disabled={profileLoading}
+                style={{
+                  ...styles.submitBtn,
+                  opacity: profileLoading ? 0.7 : 1,
+                }}
+              >
+                {profileLoading ? "Saving..." : "Save Profile"}
+              </button>
+            </form>
+          )}
         </div>
       </div>
     </div>
@@ -531,6 +1004,30 @@ const styles = {
     cursor: "pointer",
     fontSize: "0.85rem",
     fontWeight: "600",
+  },
+  editBtn: {
+    backgroundColor: "#fff",
+    color: "#333",
+    border: "1px solid #ddd",
+    padding: "6px 14px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+  },
+  editForm: {
+    backgroundColor: "#f8f9fa",
+    border: "1px solid #e0e0e0",
+    borderTop: "none",
+    borderRadius: "0 0 8px 8px",
+    padding: "1.25rem",
+    marginBottom: "0.5rem",
+  },
+  editFormTitle: {
+    fontSize: "0.95rem",
+    fontWeight: "600",
+    color: "#444",
+    marginBottom: "1rem",
   },
 };
 

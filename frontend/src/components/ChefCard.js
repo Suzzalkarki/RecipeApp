@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom';
 
 const ChefCard = ({ chef }) => {
   return (
-    <div style={styles.card}>
-      {/* Chef Image */}
+    // ✅ Added className for hover effect
+    <div style={styles.card} className="hover-lift">
       <div style={styles.imageContainer}>
         {chef.profileImage ? (
           <img
@@ -11,33 +11,29 @@ const ChefCard = ({ chef }) => {
             alt={chef.name}
             style={styles.image}
             onError={(e) => {
-              // If image fails to load, show placeholder
               e.target.src = 'https://via.placeholder.com/150?text=Chef';
             }}
           />
         ) : (
-          // No image — show initials avatar
           <div style={styles.avatar}>
             {chef.name.charAt(0).toUpperCase()}
           </div>
         )}
       </div>
 
-      {/* Chef Info */}
       <div style={styles.info}>
         <h3 style={styles.name}>{chef.name}</h3>
         <p style={styles.bio}>
           {chef.bio
             ? chef.bio.length > 100
-              ? chef.bio.substring(0, 100) + '...'  // truncate long bios
+              ? chef.bio.substring(0, 100) + '...'
               : chef.bio
             : 'Passionate chef sharing amazing recipes.'}
         </p>
       </div>
 
-      {/* View Profile Button */}
       <Link to={`/chefs/${chef._id}`} style={styles.button}>
-        View Profile
+        View Profile →
       </Link>
     </div>
   );

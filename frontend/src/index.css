@@ -8,9 +8,73 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: #f8f9fa;
   color: #333;
+  line-height: 1.6;
 }
 
 a {
   text-decoration: none;
   color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #e74c3c;
+  border-radius: 3px;
+}
+
+/* Responsive breakpoints as CSS variables */
+:root {
+  --primary: #e74c3c;
+  --primary-light: #ffeaea;
+  --text-dark: #1a1a1a;
+  --text-muted: #666;
+  --border: #e0e0e0;
+  --bg: #f8f9fa;
+  --white: #ffffff;
+  --radius: 12px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Utility classes */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+/* Mobile responsive base */
+@media (max-width: 768px) {
+  h1 { font-size: 1.6rem !important; }
+  h2 { font-size: 1.3rem !important; }
+}
+
+/* Hamburger visible only on mobile */
+@media (max-width: 768px) {
+  nav button[aria-label="Toggle menu"] {
+    display: block !important;
+  }
+  nav > div:nth-child(2) {
+    display: none !important;
+  }
 }

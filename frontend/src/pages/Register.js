@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../utils/api';
 
@@ -13,8 +13,13 @@ const Register = () => {
   const [error, setError] = useState('');       // error message to show user
   const [loading, setLoading] = useState(false); // disable button while submitting
 
-  const { login } = useAuth();
+  const { login, chef } = useAuth();
   const navigate = useNavigate();
+
+   // ✅ Redirect if already logged in
+  if (chef) {
+    return <Navigate to="/dashboard" />;
+  }
 
   // Handles ALL input changes with one function
   // e.target.name tells us WHICH field changed
