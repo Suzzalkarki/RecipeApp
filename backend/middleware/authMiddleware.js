@@ -1,33 +1,23 @@
 const jwt = require('jsonwebtoken');
 const Chef = require('../models/chef');
 
+// ─── Protect — any logged in user (chef OR foodlover) ────────────
 const protect = async (req, res, next) => {
   try {
     let token;
-
-    // 1. Check if token exists in request headers
-    // Frontend sends: Authorization: Bearer eyJhbGci...
     if (
       req.headers.authorization &&
       req.headers.authorization.startsWith('Bearer')
     ) {
-      // 2. Extract just the token part (remove "Bearer ")
       token = req.headers.authorization.split(' ')[1];
     }
 
-    // 3. If no token found, block the request
     if (!token) {
       return res.status(401).json({ message: 'Not authorized, no token' });
     }
 
-    // 4. Verify the token is valid and not expired
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // decoded = { id: "64f3abc...", iat: 1234, exp: 5678 }
-
-    // 5. Find the chef and attach to request (excluding password)
     req.chef = await Chef.findById(decoded.id).select('-password');
-
-    // 6. Move to the next function (the actual route handler)
     next();
 
   } catch (error) {
@@ -35,4 +25,15 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+// ─── Chef Only — blocks food lovers from chef-only routes ─────────
+const chefOnly = (req, res, next) => {
+  if (req.chef && req.chef.role === 'chef') {
+    next();  // is a chef — allow through
+  } else {
+    res.status(403).json({
+      message: 'Access denied. Only chefs can perform this action.',
+    });
+  }
+};
+
+module.exports = { protect, chefOnly };

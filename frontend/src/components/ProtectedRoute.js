@@ -1,19 +1,23 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-// This component wraps any page that requires login
-// If not logged in → redirect to /login
-// If logged in → show the page normally
-const ProtectedRoute = ({ children }) => {
+// Two types of protection:
+// type="auth"  → any logged in user (chef or foodlover)
+// type="chef"  → only chefs allowed
+
+const ProtectedRoute = ({ children, type = 'auth' }) => {
   const { chef, loading } = useAuth();
 
-  // Still checking localStorage — show nothing yet
   if (loading) return <div>Loading...</div>;
 
-  // Not logged in → kick to login page
+  // Not logged in at all
   if (!chef) return <Navigate to="/login" />;
 
-  // Logged in → show the protected page
+  // Logged in but wrong role for this route
+  if (type === 'chef' && chef.role !== 'chef') {
+    return <Navigate to="/" />;
+  }
+
   return <>{children}</>;
 };
 

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import API from '../utils/api';
 
 const ChefProfile = () => {
-  const { id } = useParams();  // gets the :id from the URL
+  const { id } = useParams();
   const [chef, setChef] = useState(null);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,7 +12,6 @@ const ChefProfile = () => {
   useEffect(() => {
     const fetchChefProfile = async () => {
       try {
-        // This returns { chef, recipes } from our backend
         const { data } = await API.get(`/chefs/${id}`);
         setChef(data.chef);
         setRecipes(data.recipes);
@@ -23,17 +22,26 @@ const ChefProfile = () => {
       }
     };
     fetchChefProfile();
-  }, [id]);  // re-fetch if URL id changes
+  }, [id]);
 
   if (loading) return <div style={styles.centered}>Loading profile...</div>;
   if (error) return <div style={styles.centered}>{error}</div>;
+
+  // ✅ NEW — if chef data is null/undefined after loading, show message
+  if (!chef) return (
+    <div style={styles.centered}>
+      <p style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>
+        Chef not found or no longer available.
+      </p>
+      <Link to="/" style={styles.backLink}>← Back to Home</Link>
+    </div>
+  );
 
   return (
     <div style={styles.page}>
 
       {/* Chef Profile Header */}
       <div style={styles.profileHeader}>
-        {/* Avatar or Image */}
         {chef.profileImage ? (
           <img
             src={chef.profileImage}
@@ -72,41 +80,42 @@ const ChefProfile = () => {
         ) : (
           <div style={styles.recipesGrid}>
             {recipes.map((recipe) => (
-              <div key={recipe._id} style={styles.recipeCard}>
-                {/* Recipe Image */}
-                {recipe.image && (
-                  <img
-                    src={recipe.image}
-                    alt={recipe.title}
-                    style={styles.recipeImage}
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                  />
-                )}
+              // ✅ Safety guard on each recipe too
+              recipe && recipe._id ? (
+                <div key={recipe._id} style={styles.recipeCard}>
+                  {recipe.image && (
+                    <img
+                      src={recipe.image}
+                      alt={recipe.title}
+                      style={styles.recipeImage}
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
+                  )}
 
-                <div style={styles.recipeInfo}>
-                  {/* Category Badge */}
-                  <span style={styles.categoryBadge}>
-                    {recipe.category}
-                  </span>
+                  <div style={styles.recipeInfo}>
+                    <span style={styles.categoryBadge}>
+                      {recipe.category}
+                    </span>
 
-                  <h3 style={styles.recipeTitle}>{recipe.title}</h3>
-                  <p style={styles.recipeDesc}>
-                    {recipe.description.length > 100
-                      ? recipe.description.substring(0, 100) + '...'
-                      : recipe.description}
-                  </p>
+                    <h3 style={styles.recipeTitle}>{recipe.title}</h3>
+                    <p style={styles.recipeDesc}>
+                      {recipe.description && recipe.description.length > 100
+                        ? recipe.description.substring(0, 100) + '...'
+                        : recipe.description}
+                    </p>
 
-                  <div style={styles.recipeMeta}>
-                    <span>⏱ {recipe.cookingTime} mins</span>
-                    <Link
-                      to={`/recipes/${recipe._id}`}
-                      style={styles.viewBtn}
-                    >
-                      View Recipe
-                    </Link>
+                    <div style={styles.recipeMeta}>
+                      <span>⏱ {recipe.cookingTime} mins</span>
+                      <Link
+                        to={`/recipes/${recipe._id}`}
+                        style={styles.viewBtn}
+                      >
+                        View Recipe
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : null
             ))}
           </div>
         )}
@@ -118,6 +127,11 @@ const ChefProfile = () => {
 const styles = {
   page: { minHeight: 'calc(100vh - 64px)', backgroundColor: '#f8f9fa' },
   centered: { textAlign: 'center', padding: '4rem', color: '#666' },
+  backLink: {
+    color: '#e74c3c',
+    fontWeight: '600',
+    fontSize: '0.95rem',
+  },
   profileHeader: {
     backgroundColor: '#fff',
     borderBottom: '1px solid #e0e0e0',
@@ -140,7 +154,10 @@ const styles = {
     fontSize: '3rem', fontWeight: '700', flexShrink: 0,
   },
   profileInfo: { flex: 1 },
-  chefName: { fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '0.25rem' },
+  chefName: {
+    fontSize: '2rem', fontWeight: '700',
+    color: '#1a1a1a', marginBottom: '0.25rem',
+  },
   chefEmail: { color: '#666', fontSize: '0.9rem', marginBottom: '0.75rem' },
   chefBio: { color: '#444', lineHeight: '1.6', marginBottom: '1rem' },
   badge: {
@@ -153,7 +170,10 @@ const styles = {
     fontWeight: '600',
   },
   container: { maxWidth: '1100px', margin: '0 auto', padding: '2rem 1.5rem' },
-  sectionTitle: { fontSize: '1.5rem', fontWeight: '700', marginBottom: '1.5rem', color: '#1a1a1a' },
+  sectionTitle: {
+    fontSize: '1.5rem', fontWeight: '700',
+    marginBottom: '1.5rem', color: '#1a1a1a',
+  },
   emptyText: { color: '#888', textAlign: 'center', padding: '2rem' },
   recipesGrid: {
     display: 'grid',
@@ -173,9 +193,17 @@ const styles = {
     padding: '3px 10px', borderRadius: '20px',
     fontSize: '0.75rem', fontWeight: '600',
   },
-  recipeTitle: { fontSize: '1.1rem', fontWeight: '700', margin: '0.5rem 0', color: '#1a1a1a' },
-  recipeDesc: { fontSize: '0.875rem', color: '#666', lineHeight: '1.5', marginBottom: '1rem' },
-  recipeMeta: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  recipeTitle: {
+    fontSize: '1.1rem', fontWeight: '700',
+    margin: '0.5rem 0', color: '#1a1a1a',
+  },
+  recipeDesc: {
+    fontSize: '0.875rem', color: '#666',
+    lineHeight: '1.5', marginBottom: '1rem',
+  },
+  recipeMeta: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  },
   viewBtn: {
     backgroundColor: '#e74c3c', color: '#fff',
     padding: '6px 14px', borderRadius: '6px',

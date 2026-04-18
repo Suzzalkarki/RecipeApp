@@ -6,14 +6,14 @@ const {
   updateChefProfile,
   getMyProfile,
 } = require('../controllers/chefController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, chefOnly } = require('../middleware/authMiddleware');
 
 // Public routes
 router.get('/', getAllChefs);
+router.get('/me/profile', protect, getMyProfile);
 router.get('/:id', getChefById);
 
-// Protected routes
-router.get('/me/profile', protect, getMyProfile);
-router.put('/:id', protect, updateChefProfile);
+// Chef only — only chefs can update their own profile
+router.put('/:id', protect, chefOnly, updateChefProfile);
 
 module.exports = router;

@@ -4,33 +4,31 @@ const Recipe = require('../models/Recipe');
 // ─── GET ALL chefs (Public) ──────────────────────────────────────
 const getAllChefs = async (req, res) => {
   try {
-    // Never return passwords — select('-password') excludes it
-    const chefs = await Chef.find().select('-password').sort({ createdAt: -1 });
+    // ✅ Only fetch users who are chefs — not food lovers
+    const chefs = await Chef.find({ role: 'chef' })
+      .select('-password')
+      .sort({ createdAt: -1 });
 
     res.status(200).json(chefs);
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
-
 // ─── GET ONE chef + their recipes (Public) ───────────────────────
 const getChefById = async (req, res) => {
   try {
-    // Get chef profile (no password)
-    const chef = await Chef.findById(req.params.id).select('-password');
+    // ✅ Only find users who are actually chefs
+    const chef = await Chef.findOne({
+      _id: req.params.id,
+      role: 'chef'
+    }).select('-password');
 
-    if (!chef) {
-      return res.status(404).json({ message: 'Chef not found' });
-    }
+    if (!chef) return res.status(404).json({ message: 'Chef not found' });
 
-    // Get all recipes belonging to this chef
     const recipes = await Recipe.find({ chefId: req.params.id })
       .sort({ createdAt: -1 });
 
-    // Send both chef info and their recipes together
     res.status(200).json({ chef, recipes });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

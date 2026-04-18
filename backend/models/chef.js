@@ -28,10 +28,14 @@ const chefSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // ✅ NEW — role field
+    role: {
+      type: String,
+      enum: ['chef', 'foodlover'],
+      default: 'foodlover',
+    },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 const Chef = mongoose.model('Chef', chefSchema);

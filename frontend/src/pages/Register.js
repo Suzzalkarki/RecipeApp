@@ -4,36 +4,28 @@ import { useAuth } from '../context/AuthContext';
 import API from '../utils/api';
 
 const Register = () => {
-  // One state object for all form fields
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    role: 'foodlover',   // default selection
   });
-  const [error, setError] = useState('');       // error message to show user
-  const [loading, setLoading] = useState(false); // disable button while submitting
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const { login, chef } = useAuth();
   const navigate = useNavigate();
 
-   // ✅ Redirect if already logged in
-  if (chef) {
-    return <Navigate to="/dashboard" />;
-  }
+  // Already logged in — redirect away
+  if (chef) return <Navigate to="/" />;
 
-  // Handles ALL input changes with one function
-  // e.target.name tells us WHICH field changed
   const handleChange = (e) => {
-    setFormData({
-      ...formData,               // keep existing values
-      [e.target.name]: e.target.value,  // update only the changed field
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();  // stop page from reloading on form submit
+    e.preventDefault();
 
-    // Basic frontend validation
     if (!formData.name || !formData.email || !formData.password) {
       return setError('Please fill all fields');
     }
@@ -45,17 +37,17 @@ const Register = () => {
       setLoading(true);
       setError('');
 
-      // Call our backend register API
       const { data } = await API.post('/auth/register', formData);
+      login(data);  // saves token + user info including role
 
-      // Save chef data to context + localStorage
-      login(data);
-
-      // Redirect to dashboard after successful register
-      navigate('/dashboard');
+      // Redirect based on role
+      if (data.role === 'chef') {
+        navigate('/dashboard');
+      } else {
+        navigate('/');  // food lovers go to home
+      }
 
     } catch (err) {
-      // Show error message from backend (e.g. "Email already registered")
       setError(err.response?.data?.message || 'Something went wrong');
     } finally {
       setLoading(false);
@@ -66,20 +58,20 @@ const Register = () => {
     <div style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.title}>Join RecipeNest</h1>
-        <p style={styles.subtitle}>Create your chef account</p>
+        <p style={styles.subtitle}>Create your account</p>
 
-        {/* Show error if exists */}
         {error && <div style={styles.error}>{error}</div>}
 
         <form onSubmit={handleSubmit}>
+
           <div style={styles.field}>
             <label style={styles.label}>Full Name</label>
             <input
               type="text"
-              name="name"           // must match formData key
+              name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="Gordon Ramsay"
+              placeholder="Your full name"
               style={styles.input}
             />
           </div>
@@ -91,7 +83,7 @@ const Register = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="chef@example.com"
+              placeholder="your@email.com"
               style={styles.input}
             />
           </div>
@@ -106,6 +98,40 @@ const Register = () => {
               placeholder="Min 6 characters"
               style={styles.input}
             />
+          </div>
+
+          {/* ✅ NEW — Role Selector */}
+          <div style={styles.field}>
+            <label style={styles.label}>I am a...</label>
+            <div style={styles.roleContainer}>
+
+              {/* Food Lover Option */}
+              <div
+                onClick={() => setFormData({ ...formData, role: 'foodlover' })}
+                style={{
+                  ...styles.roleCard,
+                  ...(formData.role === 'foodlover' ? styles.roleCardActive : {}),
+                }}
+              >
+                <span style={styles.roleEmoji}>🍽️</span>
+                <span style={styles.roleTitle}>Food Lover</span>
+                <span style={styles.roleDesc}>Explore recipes and chefs</span>
+              </div>
+
+              {/* Chef Option */}
+              <div
+                onClick={() => setFormData({ ...formData, role: 'chef' })}
+                style={{
+                  ...styles.roleCard,
+                  ...(formData.role === 'chef' ? styles.roleCardActive : {}),
+                }}
+              >
+                <span style={styles.roleEmoji}>👨‍🍳</span>
+                <span style={styles.roleTitle}>Chef</span>
+                <span style={styles.roleDesc}>Share your recipes</span>
+              </div>
+
+            </div>
           </div>
 
           <button
@@ -145,7 +171,7 @@ const styles = {
     borderRadius: '12px',
     border: '1px solid #e0e0e0',
     width: '100%',
-    maxWidth: '420px',
+    maxWidth: '460px',
   },
   title: {
     fontSize: '1.8rem',
@@ -166,9 +192,7 @@ const styles = {
     fontSize: '0.9rem',
     border: '1px solid #f5c6cb',
   },
-  field: {
-    marginBottom: '1.2rem',
-  },
+  field: { marginBottom: '1.2rem' },
   label: {
     display: 'block',
     marginBottom: '6px',
@@ -184,6 +208,41 @@ const styles = {
     fontSize: '1rem',
     outline: 'none',
     boxSizing: 'border-box',
+  },
+  // Role selector styles
+  roleContainer: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '1rem',
+  },
+  roleCard: {
+    border: '2px solid #e0e0e0',
+    borderRadius: '10px',
+    padding: '1rem',
+    textAlign: 'center',
+    cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.3rem',
+    transition: 'all 0.2s',
+    backgroundColor: '#fafafa',
+  },
+  roleCardActive: {
+    border: '2px solid #e74c3c',
+    backgroundColor: '#ffeaea',
+  },
+  roleEmoji: {
+    fontSize: '2rem',
+  },
+  roleTitle: {
+    fontWeight: '700',
+    fontSize: '0.95rem',
+    color: '#1a1a1a',
+  },
+  roleDesc: {
+    fontSize: '0.75rem',
+    color: '#666',
   },
   button: {
     width: '100%',

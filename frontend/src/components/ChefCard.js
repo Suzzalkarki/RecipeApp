@@ -1,8 +1,13 @@
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const ChefCard = ({ chef }) => {
+  const { chef: loggedInUser } = useAuth();
+
+  // ✅ Safety guard MUST be here — after hooks, before anything touches chef
+  if (!chef || !chef.name) return null;
+
   return (
-    // ✅ Added className for hover effect
     <div style={styles.card} className="hover-lift">
       <div style={styles.imageContainer}>
         {chef.profileImage ? (
@@ -32,9 +37,15 @@ const ChefCard = ({ chef }) => {
         </p>
       </div>
 
-      <Link to={`/chefs/${chef._id}`} style={styles.button}>
-        View Profile →
-      </Link>
+      {loggedInUser ? (
+        <Link to={`/chefs/${chef._id}`} style={styles.button}>
+          View Profile →
+        </Link>
+      ) : (
+        <Link to="/login" style={styles.loginPromptBtn}>
+          🔒 Login to View Profile
+        </Link>
+      )}
     </div>
   );
 };
@@ -101,6 +112,17 @@ const styles = {
     fontSize: '0.9rem',
     textAlign: 'center',
     width: '100%',
+  },
+  loginPromptBtn: {
+    backgroundColor: '#f8f9fa',
+    color: '#666',
+    padding: '8px 20px',
+    borderRadius: '6px',
+    fontWeight: '600',
+    fontSize: '0.9rem',
+    textAlign: 'center',
+    width: '100%',
+    border: '1px solid #ddd',
   },
 };
 

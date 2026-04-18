@@ -7,15 +7,15 @@ const {
   updateRecipe,
   deleteRecipe,
 } = require('../controllers/recipeController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, chefOnly } = require('../middleware/authMiddleware');
 
-// Public routes — no token needed
+// Public routes
 router.get('/', getAllRecipes);
 router.get('/:id', getRecipeById);
 
-// Protected routes — must have valid JWT token
-router.post('/', protect, createRecipe);
-router.put('/:id', protect, updateRecipe);
-router.delete('/:id', protect, deleteRecipe);
+// Chef only routes — must be logged in AND be a chef
+router.post('/', protect, chefOnly, createRecipe);
+router.put('/:id', protect, chefOnly, updateRecipe);
+router.delete('/:id', protect, chefOnly, deleteRecipe);
 
 module.exports = router;

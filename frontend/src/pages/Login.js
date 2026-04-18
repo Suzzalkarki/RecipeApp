@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate , Navigate} from 'react-router-dom';
+import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../utils/api';
 
@@ -8,13 +8,11 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { login, chef } = useAuth();   // ← add chef here
+  const { login, chef } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ NEW — redirect if already logged in
-  if (chef) {
-    return <Navigate to="/dashboard" />;
-  }
+  // Already logged in
+  if (chef) return <Navigate to="/" />;
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -33,7 +31,13 @@ const Login = () => {
 
       const { data } = await API.post('/auth/login', formData);
       login(data);
-      navigate('/dashboard');
+
+      // ✅ Redirect based on role
+      if (data.role === 'chef') {
+        navigate('/dashboard');
+      } else {
+        navigate('/');  // food lovers go home
+      }
 
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong');
@@ -46,7 +50,7 @@ const Login = () => {
     <div style={styles.container}>
       <div style={styles.card}>
         <h1 style={styles.title}>Welcome Back!</h1>
-        <p style={styles.subtitle}>Login to your chef account</p>
+        <p style={styles.subtitle}>Login to your account</p>
 
         {error && <div style={styles.error}>{error}</div>}
 
@@ -58,7 +62,7 @@ const Login = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              placeholder="chef@example.com"
+              placeholder="your@email.com"
               style={styles.input}
             />
           </div>
@@ -89,7 +93,7 @@ const Login = () => {
         </form>
 
         <p style={styles.switchText}>
-          New chef?{' '}
+          New here?{' '}
           <Link to="/register" style={styles.switchLink}>Create account</Link>
         </p>
       </div>
@@ -120,10 +124,7 @@ const styles = {
     color: '#1a1a1a',
     marginBottom: '0.25rem',
   },
-  subtitle: {
-    color: '#666',
-    marginBottom: '1.5rem',
-  },
+  subtitle: { color: '#666', marginBottom: '1.5rem' },
   error: {
     backgroundColor: '#ffeaea',
     color: '#e74c3c',
