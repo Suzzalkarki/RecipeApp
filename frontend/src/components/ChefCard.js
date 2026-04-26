@@ -4,89 +4,120 @@ import { useAuth } from '../context/AuthContext';
 const ChefCard = ({ chef }) => {
   const { chef: loggedInUser } = useAuth();
 
-  // ✅ Safety guard MUST be here — after hooks, before anything touches chef
   if (!chef || !chef.name) return null;
 
   return (
     <div style={styles.card} className="hover-lift">
-      <div style={styles.imageContainer}>
+      {/* Green top accent line */}
+      <div style={styles.topAccent} />
+
+      {/* Avatar */}
+      <div style={styles.avatarWrapper}>
         {chef.profileImage ? (
           <img
             src={chef.profileImage}
             alt={chef.name}
-            style={styles.image}
+            style={styles.avatar}
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/150?text=Chef';
+              e.target.style.display = 'none';
             }}
           />
         ) : (
-          <div style={styles.avatar}>
+          <div style={styles.avatarFallback}>
             {chef.name.charAt(0).toUpperCase()}
           </div>
         )}
+        <div style={styles.onlineDot} />
       </div>
 
+      {/* Info */}
       <div style={styles.info}>
         <h3 style={styles.name}>{chef.name}</h3>
         <p style={styles.bio}>
           {chef.bio
-            ? chef.bio.length > 100
-              ? chef.bio.substring(0, 100) + '...'
+            ? chef.bio.length > 90
+              ? chef.bio.substring(0, 90) + '...'
               : chef.bio
-            : 'Passionate chef sharing amazing recipes.'}
+            : 'Passionate about creating extraordinary culinary experiences.'}
         </p>
       </div>
 
-      {loggedInUser ? (
-        <Link to={`/chefs/${chef._id}`} style={styles.button}>
-          View Profile →
-        </Link>
-      ) : (
-        <Link to="/login" style={styles.loginPromptBtn}>
-          🔒 Login to View Profile
-        </Link>
-      )}
+      {/* Footer */}
+      <div style={styles.cardFooter}>
+        {loggedInUser ? (
+          <Link to={`/chefs/${chef._id}`} style={styles.viewBtn}>
+            View Profile <span style={styles.arrow}>→</span>
+          </Link>
+        ) : (
+          <Link to="/login" style={styles.lockBtn}>
+            🔒 Please Signup
+          </Link>
+        )}
+      </div>
     </div>
   );
 };
 
 const styles = {
   card: {
-    backgroundColor: '#fff',
-    borderRadius: '12px',
-    border: '1px solid #e0e0e0',
+    background: 'rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '20px',
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    padding: '1.5rem',
+    padding: '2rem 1.5rem 1.5rem',
     gap: '1rem',
-    transition: 'transform 0.2s, box-shadow 0.2s',
     cursor: 'pointer',
+    position: 'relative',
   },
-  imageContainer: {
-    width: '100px',
-    height: '100px',
-    borderRadius: '50%',
-    overflow: 'hidden',
-    flexShrink: 0,
+  topAccent: {
+    position: 'absolute',
+    top: 0,
+    left: '20%',
+    right: '20%',
+    height: '2px',
+    background: 'linear-gradient(90deg, transparent, #10b981, transparent)',
+    borderRadius: '0 0 4px 4px',
   },
-  image: {
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
+  avatarWrapper: {
+    position: 'relative',
+    width: '90px',
+    height: '90px',
   },
   avatar: {
-    width: '100px',
-    height: '100px',
+    width: '90px',
+    height: '90px',
     borderRadius: '50%',
-    backgroundColor: '#e74c3c',
+    objectFit: 'cover',
+    border: '2px solid rgba(16,185,129,0.4)',
+  },
+  avatarFallback: {
+    width: '90px',
+    height: '90px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #10b981, #059669)',
     color: '#fff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '2.5rem',
+    fontSize: '2rem',
     fontWeight: '700',
+    border: '2px solid rgba(16,185,129,0.4)',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: '4px',
+    right: '4px',
+    width: '14px',
+    height: '14px',
+    borderRadius: '50%',
+    backgroundColor: '#10b981',
+    border: '2px solid #0a0a0a',
+    boxShadow: '0 0 8px #10b981',
   },
   info: {
     textAlign: 'center',
@@ -95,35 +126,46 @@ const styles = {
   name: {
     fontSize: '1.1rem',
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#fff',
     marginBottom: '0.5rem',
+    letterSpacing: '-0.3px',
   },
   bio: {
-    fontSize: '0.875rem',
-    color: '#666',
-    lineHeight: '1.5',
+    fontSize: '0.825rem',
+    color: 'rgba(255,255,255,0.45)',
+    lineHeight: '1.6',
+    fontWeight: '400',
   },
-  button: {
-    backgroundColor: '#e74c3c',
+  cardFooter: {
+    width: '100%',
+    borderTop: '1px solid rgba(255,255,255,0.06)',
+    paddingTop: '1rem',
+  },
+  viewBtn: {
+    display: 'block',
+    textAlign: 'center',
+    background: 'linear-gradient(135deg, #10b981, #059669)',
     color: '#fff',
-    padding: '8px 20px',
-    borderRadius: '6px',
+    padding: '10px 20px',
+    borderRadius: '50px',
     fontWeight: '600',
-    fontSize: '0.9rem',
-    textAlign: 'center',
-    width: '100%',
+    fontSize: '0.875rem',
+    letterSpacing: '0.3px',
+    boxShadow: '0 4px 15px rgba(16,185,129,0.25)',
+    transition: 'all 0.3s',
   },
-  loginPromptBtn: {
-    backgroundColor: '#f8f9fa',
-    color: '#666',
-    padding: '8px 20px',
-    borderRadius: '6px',
-    fontWeight: '600',
-    fontSize: '0.9rem',
+  lockBtn: {
+    display: 'block',
     textAlign: 'center',
-    width: '100%',
-    border: '1px solid #ddd',
+    background: 'rgba(255,255,255,0.05)',
+    color: 'rgba(255,255,255,0.5)',
+    padding: '10px 20px',
+    borderRadius: '50px',
+    fontWeight: '500',
+    fontSize: '0.875rem',
+    border: '1px solid rgba(255,255,255,0.08)',
   },
+  arrow: { marginLeft: '4px' },
 };
 
 export default ChefCard;
